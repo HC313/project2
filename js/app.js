@@ -49,22 +49,37 @@ function getThresholds() {
 
 function setStatus(text) { els.modelStatus.textContent = text; }
 
-// 간단 오버레이(랜드마크 찍기)
 function drawOverlay(landmarks) {
   const ctx = els.canvas.getContext('2d');
-  els.canvas.width = els.video.clientWidth || 1280;
-  els.canvas.height = els.video.clientHeight || 720;
-  ctx.clearRect(0,0,els.canvas.width,els.canvas.height);
+  // 1) 캔버스를 ‘표시되는 비디오 크기’에 맞춤
+  const dispW = els.video.clientWidth;
+  const dispH = els.video.clientHeight;
+  els.canvas.width = dispW;
+  els.canvas.height = dispH;
+  ctx.clearRect(0, 0, dispW, dispH);
   if (!landmarks) return;
+  // 2) 원본 해상도(센서/스트림) → 표시 크기 스케일
+  const srcW = els.video.videoWidth || dispW;
+  const srcH = els.video.videoHeight || dispH;
+  const scaleX = dispW / srcW;
+  const scaleY = dispH / srcH;
+  // 3) CSS 미러링을 썼다면(예: transform: scaleX(-1)) 캔버스도 반전
+  const isMirrored = getComputedStyle(els.video).transform.includes('matrix(-1');
+  ctx.save();
+  if (isMirrored) {
+    ctx.translate(dispW, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.fillStyle = '#5b8cff';
   for (const key of Object.keys(landmarks)) {
     const p = landmarks[key];
+    const x = p.x * scaleX;
+    const y = p.y * scaleY;
     ctx.beginPath();
-    ctx.arc(p.x / (els.video.videoWidth || 1) * els.canvas.width,
-            p.y / (els.video.videoHeight || 1) * els.canvas.height,
-            4, 0, Math.PI*2);
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
 }
 
 function updateUI(features, result) {
