@@ -59,3 +59,6 @@ window.__posture = window.__posture || {};
   // 루프 실행 플래그 노출
   Object.defineProperty(scope, '__isRunning', { get: ()=>isRunning });
 })(window.__posture);
+
+window.startCamera = window.__posture.startCamera;
+window.stopCamera  = window.__posture.stopCamera;
