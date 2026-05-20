@@ -1,4 +1,3 @@
-@import url('[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap)');
 :root { --bg:#0d0f14; --surface:#161a22; --surface2:#1e2330; --border:rgba(255,255,255,0.06); --accent:#00e5c0; --accent2:#ff6b6b; --accent3:#ffd166; --text:#e8ecf0; --muted:#6b7585; --radius:12px; }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-weight:300;min-height:100vh;display:flex;flex-direction:column}
