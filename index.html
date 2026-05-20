@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>POSTURE.AI 거북목 감지 시스템</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>POSTURE.AI 거북목 감지 시스템</h1>
+      <div id="model-status" class="badge">대기 중</div>
+    </header>
+
+    <section class="score-panel">
+      <div class="score-label">자세 점수</div>
+      <div id="posture-score" class="score-value">-- / 100</div>
+    </section>
+
+    <section class="video-panel">
+      <div class="video-wrapper">
+        <video id="webcam" playsinline autoplay muted></video>
+        <canvas id="overlay"></canvas>
+        <div class="video-hint">
+          <img src="page_1_image_2_v2.jpg" alt="Camera icon" />
+          <p>카메라를 시작해 자세를 분석하세요</p>
+        </div>
+      </div>
+
+      <div class="features">
+        <h2>추출된 특징값 ( F E A T U R E S )</h2>
+        <ul>
+          <li>귀-어깨 거리 비율: <span id="feature-ear-shoulder">--</span></li>
+          <li>머리 전방 이동 (px): <span id="feature-head-forward">--</span></li>
+          <li>목 기울기 (°): <span id="feature-neck-angle">--</span></li>
+          <li>어깨 수평 대칭: <span id="feature-shoulder-sym">--</span></li>
+          <li>모델 판정: <span id="feature-model-pred">--</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="buttons">
+        <button id="btn-start" class="primary">카메라 시작</button>
+        <button id="btn-stop" class="secondary">중지</button>
+      </div>
+      <div class="badges">
+        <span id="badge-normal" class="chip">정상 수집</span>
+        <span id="badge-turtle" class="chip danger">거북 목 수 집</span>
+      </div>
+    </section>
+
+    <section class="thresholds">
+      <h2>임계값 설정</h2>
+      <div class="grid">
+        <label>
+          목 기울기 경고 (°)
+          <input id="th-neck-angle" type="number" value="15" step="1" />
+        </label>
+        <label>
+          귀-어깨 거리 비율 경고
+          <input id="th-ear-shoulder" type="number" value="0.30" step="0.01" />
+        </label>
+      </div>
+    </section>
+
+    <section class="model-state">
+      <h2>모델 상태</h2>
+      <div class="state-line">
+        <span>MediaPipe Pose</span>
+        <span id="state-mediapipe" class="state-pill">로딩 중</span>
+      </div>
+      <div class="state-line">
+        <span>TensorFlow.js 분류 모델</span>
+        <span id="state-tf" class="state-pill">대기</span>
+      </div>
+      <div class="state-line">
+        <span>수집 데이터</span>
+        <span id="state-data" class="state-pill">미학습 0개</span>
+      </div>
+    </section>
+
+    <section class="history">
+      <h2>감지 이력</h2>
+      <div id="history-list" class="history-list">감지 기록 없음</div>
+    </section>
+  </main>
+
+  <!-- 외부 라이브러리(필요 시): MediaPipe / TFJS가 실제로 연결된다면 해당 CDN 추가 -->
+  <!-- <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@mediapipe/pose)"></script> -->
+  <!-- <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@tensorflow/tfjs)"></script> -->
+
+  <!-- 앱 스크립트 -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
