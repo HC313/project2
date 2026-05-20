@@ -1,4 +1,3 @@
-// app.js — 앱 오케스트레이션
 import { CameraController } from './camera.js';
 import { estimateLandmarks, computeFeatures } from './pose.js';
 import { classifyPosture } from './posture.js';
