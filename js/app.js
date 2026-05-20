@@ -1,7 +1,5 @@
 import { CameraController } from './camera.js';
 import { estimateLandmarks, computeFeatures } from './pose.js';
-import { classifyPosture } from './posture.js';
-import { AlertManager, appendHistory } from './alert.js';
 
 const els = {
   video: document.getElementById('webcam'),
