@@ -1,96 +1,117 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>POSTURE.AI 거북목 감지 시스템</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>거북목 감지기</title>
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main class="container">
-    <header>
-      <h1>POSTURE.AI 거북목 감지 시스템</h1>
-      <div id="model-status" class="badge">대기 중</div>
-    </header>
+  <!-- 원본 HTML: header, main, video/canvas, 패널, 버튼, 카드들 그대로 -->
+  <header>
+    <span class="logo">POSTURE<span class="logo-dot">.</span>AI</span>
+    <h1>거북목 감지 시스템</h1>
+    <div class="status-pill">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">대기 중</span>
+    </div>
+  </header>
 
-    <section class="score-panel">
-      <div class="score-label">자세 점수</div>
-      <div id="posture-score" class="score-value">-- / 100</div>
-    </section>
-
-    <section class="video-panel">
+  <main>
+    <div class="camera-section">
       <div class="video-wrapper">
-        <video id="webcam" playsinline autoplay muted></video>
-        <canvas id="overlay"></canvas>
-        <div class="video-hint">
-          <p>카메라를 시작해 자세를 분석하세요</p>
+        <video id="videoElement" autoplay playsinline muted></video>
+        <canvas id="overlayCanvas"></canvas>
+        <div class="video-overlay-msg" id="videoMsg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M15 10l4.553-2.069A1 1 0 0121 8.869v6.262a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+          </svg>
+          <span>카메라를 시작해 자세를 분석하세요</span>
         </div>
       </div>
 
-      <div class="features">
-        <h2>추출된 특징값 ( F E A T U R E S )</h2>
-        <ul>
-          <li>귀-어깨 거리 비율: <span id="feature-ear-shoulder">--</span></li>
-          <li>머리 전방 이동 (px): <span id="feature-head-forward">--</span></li>
-          <li>목 기울기 (°): <span id="feature-neck-angle">--</span></li>
-          <li>어깨 수평 대칭: <span id="feature-shoulder-sym">--</span></li>
-          <li>모델 판정: <span id="feature-model-pred">--</span></li>
-        </ul>
+      <div class="alert-banner" id="alertBanner">
+        <span class="icon" id="alertIcon">✓</span>
+        <span id="alertMsg">자세가 바릅니다</span>
       </div>
-    </section>
 
-    <section class="controls">
-      <div class="buttons">
-        <button id="btn-start" class="primary">카메라 시작</button>
-        <button id="btn-stop" class="secondary">중지</button>
+      <div class="controls">
+        <button class="primary" id="startBtn" onclick="startCamera()">카메라 시작</button>
+        <button id="stopBtn" onclick="stopCamera()" disabled>중지</button>
+        <button id="collectNormalBtn" onclick="collectData('normal')" disabled title="현재 자세를 'normal' 데이터로 저장">정상 수집</button>
+        <button id="collectTurtleBtn" onclick="collectData('turtle_neck')" disabled title="현재 자세를 'turtle_neck' 데이터로 저장">거북목 수집</button>
       </div>
-      <div class="badges">
-        <span id="badge-normal" class="chip">정상 수집</span>
-        <span id="badge-turtle" class="chip danger">거북 목 수 집</span>
-      </div>
-    </section>
+    </div>
 
-    <section class="thresholds">
-      <h2>임계값 설정</h2>
-      <div class="grid">
-        <label>
-          목 기울기 경고 (°)
-          <input id="th-neck-angle" type="number" value="15" step="1" />
-        </label>
-        <label>
-          귀-어깨 거리 비율 경고
-          <input id="th-ear-shoulder" type="number" value="0.30" step="0.01" />
-        </label>
+    <div class="side-panel">
+      <!-- 점수 카드, 특징값 카드, 임계값 카드, 모델 상태, 이력 — 원문 그대로 -->
+      <div class="card">
+        <div class="card-title">자세 점수</div>
+        <div class="score-display">
+          <div class="score-num" id="scoreNum">--</div>
+          <div class="score-label">/ 100</div>
+        </div>
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="scoreBar" style="width:0%"></div>
+        </div>
       </div>
-    </section>
 
-    <section class="model-state">
-      <h2>모델 상태</h2>
-      <div class="state-line">
-        <span>MediaPipe Pose</span>
-        <span id="state-mediapipe" class="state-pill">로딩 중</span>
+      <div class="card">
+        <div class="card-title">추출된 특징값 (Features)</div>
+        <div class="metric-row"><span class="metric-label">귀-어깨 거리 비율</span><span class="metric-value" id="earShoulderRatio">--</span></div>
+        <div class="metric-row"><span class="metric-label">머리 전방 이동 (px)</span><span class="metric-value" id="headForwardDist">--</span></div>
+        <div class="metric-row"><span class="metric-label">목 기울기 (°)</span><span class="metric-value" id="neckAngle">--</span></div>
+        <div class="metric-row"><span class="metric-label">어깨 수평 대칭</span><span class="metric-value" id="shoulderSymmetry">--</span></div>
+        <div class="metric-row"><span class="metric-label">모델 판정</span><span class="metric-value" id="modelResult">--</span></div>
       </div>
-      <div class="state-line">
-        <span>TensorFlow.js 분류 모델</span>
-        <span id="state-tf" class="state-pill">대기</span>
-      </div>
-      <div class="state-line">
-        <span>수집 데이터</span>
-        <span id="state-data" class="state-pill">미학습 0개</span>
-      </div>
-    </section>
 
-    <section class="history">
-      <h2>감지 이력</h2>
-      <div id="history-list" class="history-list">감지 기록 없음</div>
-    </section>
+      <div class="card threshold-section">
+        <div class="card-title">임계값 설정</div>
+        <label>목 기울기 경고 (°)</label>
+        <div class="threshold-row">
+          <input type="range" min="5" max="30" value="15" id="angleThreshold"
+            oninput="document.getElementById('angleVal').textContent=this.value">
+          <span class="threshold-val" id="angleVal">15</span>
+        </div>
+        <label>귀-어깨 거리 비율 경고</label>
+        <div class="threshold-row">
+          <input type="range" min="10" max="60" value="30" id="distThreshold"
+            oninput="document.getElementById('distVal').textContent=(this.value/100).toFixed(2)">
+          <span class="threshold-val" id="distVal">0.30</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">모델 상태</div>
+        <div class="model-status">
+          <div class="model-item"><span>MediaPipe Pose</span><span class="badge pending" id="mpBadge">로딩 중</span></div>
+          <div class="model-item"><span>TensorFlow.js</span><span class="badge pending" id="tfBadge">대기</span></div>
+          <div class="model-item"><span>분류 모델</span><span class="badge pending" id="classifierBadge">미학습</span></div>
+          <div class="model-item"><span>수집 데이터</span><span class="badge pending" id="dataBadge">0개</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">감지 이력</div>
+        <div class="timeline" id="timeline">
+          <div class="empty-state">감지 기록 없음</div>
+        </div>
+      </div>
+    </div>
   </main>
 
-  <!-- 외부 라이브러리(필요 시): MediaPipe / TFJS가 실제로 연결된다면 해당 CDN 추가 -->
-  <!-- <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@mediapipe/pose)"></script> -->
-  <!-- <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@tensorflow/tfjs)"></script> -->
+  <!-- 외부 라이브러리 (원문 그대로) -->
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js)" crossorigin="anonymous"></script>
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js)" crossorigin="anonymous"></script>
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js)" crossorigin="anonymous"></script>
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js)" crossorigin="anonymous"></script>
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js)"></script>
 
-  <!-- 앱 스크립트 -->
-  <script type="module" src="js/app.js"></script>
+  <!-- 분리된 앱 스크립트: 순서 유지 -->
+  <script src="./js/camera.js"></script>
+  <script src="./js/pose.js"></script>
+  <script src="./js/posture.js"></script>
+  <script src="./js/alert.js"></script>
+  <script src="./js/app.js"></script>
 </body>
 </html>
