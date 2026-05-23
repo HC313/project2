@@ -1,39 +1,65 @@
-let turtleNeckStartTime = null;
-let warningShown = false;
-function showWarning() {
-    const warningText =
-        document.getElementById("warning-text");
-    if (warningText) {
-        warningText.innerText =
-            "자세를 바로 잡아주세요!";
-        warningText.style.display = "block";
+// alert.js — 자세 분류 & 알림 담당
+// Turtle Neck 상태가 일정 시간 이상 지속되면 warning을 표시하는 로직
+
+class AlertManager {
+  constructor({ windowMs = 5000, onNotify } = {}) {
+    this.windowMs = windowMs;
+    this.onNotify = onNotify;
+
+    this.badPostureStartTime = null;
+    this.warningShown = false;
+  }
+
+  update(isBadPosture) {
+    if (isBadPosture) {
+      this.startBadPostureTimer();
+      return;
     }
-}
-function hideWarning() {
-    const warningText =
-        document.getElementById("warning-text");
 
-    if (warningText) {
-        warningText.style.display = "none";
+    this.reset();
+  }
+
+  startBadPostureTimer() {
+    if (this.badPostureStartTime === null) {
+      this.badPostureStartTime = Date.now();
     }
-}
 
-function handleAlert(posture) {
+    const elapsedTime = Date.now() - this.badPostureStartTime;
 
-    if (posture === "Turtle Neck") {
-        if (!turtleNeckStartTime) {
-            turtleNeckStartTime = Date.now();
-        }
-        const elapsed =
-            Date.now() - turtleNeckStartTime;
-        if (elapsed >= 5000 &&
-            !warningShown) {
-            showWarning();
-            warningShown = true;
-        }
+    if (elapsedTime >= this.windowMs && !this.warningShown) {
+      this.showWarning();
+      this.warningShown = true;
+
+      if (typeof this.onNotify === 'function') {
+        this.onNotify();
+      }
+    }
+  }
+
+  showWarning() {
+    const warningMessage = document.getElementById('warning-message');
+
+    if (warningMessage) {
+      warningMessage.textContent = '자세를 바로 잡아주세요!';
+      warningMessage.classList.remove('hidden');
     } else {
-        turtleNeckStartTime = null;
-        warningShown = false;
-        hideWarning();
+      alert('자세를 바로 잡아주세요!');
     }
+  }
+
+  hideWarning() {
+    const warningMessage = document.getElementById('warning-message');
+
+    if (warningMessage) {
+      warningMessage.classList.add('hidden');
+    }
+  }
+
+  reset() {
+    this.badPostureStartTime = null;
+    this.warningShown = false;
+    this.hideWarning();
+  }
 }
+
+window.AlertManager = AlertManager;
