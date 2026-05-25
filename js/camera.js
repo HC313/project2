@@ -1,64 +1,79 @@
-// camera.js — 화면 & 웹캠 담당
-window.__posture = window.__posture || {};
-(function(scope){
-  let isRunning = false;
+// js/camera.js
 
-  scope.startCamera = async function startCamera() {
-    const videoEl = document.getElementById('videoElement');
-    document.getElementById('startBtn').disabled = true;
+export class CameraController {
+  constructor(videoElement) {
+    this.video = videoElement;
+    this.stream = null;
+    this.frameCallback = null;
+    this.animationId = null;
+    this.isRunning = false;
+  }
 
-    if (!scope.initMediaPipe) {
-      console.error('MediaPipe initializer not found');
-    } else if (!scope.pose) {
-      await scope.initMediaPipe();
+  async start() {
+    if (!this.video) {
+      throw new Error('Video element not found');
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' }
-      });
-      videoEl.srcObject = stream;
-      await videoEl.play();
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: 'user',
+      },
+      audio: false,
+    });
 
-      document.getElementById('videoMsg').style.display = 'none';
-      document.getElementById('stopBtn').disabled = false;
-      document.getElementById('collectNormalBtn').disabled = false;
-      document.getElementById('collectTurtleBtn').disabled = false;
+    this.video.srcObject = this.stream;
 
-      scope.setStatus('active', '감지 중');
-      isRunning = true;
-      scope.__runDetectionLoop();
-    } catch (err) {
-      console.error(err);
-      scope.setStatus('', '카메라 오류');
-      document.getElementById('startBtn').disabled = false;
-      alert('카메라 접근 권한이 필요합니다.');
+    await this.video.play();
+
+    const videoMsg = document.getElementById('videoMsg');
+    if (videoMsg) {
+      videoMsg.style.display = 'none';
     }
-  };
 
-  scope.stopCamera = function stopCamera() {
-    const videoEl = document.getElementById('videoElement');
-    const canvas = document.getElementById('overlayCanvas');
-    const ctx = canvas.getContext('2d');
+    this.isRunning = true;
 
-    isRunning = false;
-    if (videoEl.srcObject) {
-      videoEl.srcObject.getTracks().forEach(t => t.stop());
-      videoEl.srcObject = null;
+    return this.stream;
+  }
+
+  stop() {
+    this.isRunning = false;
+
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
     }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    document.getElementById('videoMsg').style.display = 'flex';
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
-    document.getElementById('collectNormalBtn').disabled = true;
-    document.getElementById('collectTurtleBtn').disabled = true;
-    scope.setStatus('', '대기 중');
-    scope.resetMetrics();
-  };
 
-  // 루프 실행 플래그 노출
-  Object.defineProperty(scope, '__isRunning', { get: ()=>isRunning });
-})(window.__posture);
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream = null;
+    }
 
-window.startCamera = window.__posture.startCamera;
-window.stopCamera  = window.__posture.stopCamera;
+    if (this.video) {
+      this.video.pause();
+      this.video.srcObject = null;
+    }
+
+    const videoMsg = document.getElementById('videoMsg');
+    if (videoMsg) {
+      videoMsg.style.display = 'flex';
+    }
+  }
+
+  onFrame(callback) {
+    this.frameCallback = callback;
+
+    const loop = async () => {
+      if (!this.isRunning) return;
+
+      if (this.video && this.video.readyState >= 2 && this.frameCallback) {
+        await this.frameCallback(this.video);
+      }
+
+      this.animationId = requestAnimationFrame(loop);
+    };
+
+    loop();
+  }
+}
