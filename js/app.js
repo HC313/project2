@@ -173,15 +173,38 @@ function updateUI(features, result) {
 
   const isBad = result.label === 'Turtle';
 
-  els.badgeTurtle.classList.toggle('hidden', !isBad);
-  els.badgeNormal.classList.toggle('hidden', isBad);
+  // 💡 [수정] 이미 CSS에 정의된 loaded, pending, error 클래스를 활용해 불빛 전환 효과 구현
+  if (isBad) {
+    // 거북목 상태: Turtle은 빨간불(error), Normal은 꺼짐(pending)
+    els.badgeTurtle.classList.remove('pending');
+    els.badgeTurtle.classList.add('error');
+
+    els.badgeNormal.classList.remove('loaded');
+    els.badgeNormal.classList.add('pending');
+  } else if (result.label === 'Normal') {
+    // 정상 상태: Normal은 초록불(loaded), Turtle은 꺼짐(pending)
+    els.badgeTurtle.classList.remove('error');
+    els.badgeTurtle.classList.add('pending');
+
+    els.badgeNormal.classList.remove('pending');
+    els.badgeNormal.classList.add('loaded');
+  } else {
+    // 미판정 상태: 둘 다 꺼짐(pending)
+    els.badgeTurtle.classList.remove('error');
+    els.badgeTurtle.classList.add('pending');
+    els.badgeNormal.classList.remove('loaded');
+    els.badgeNormal.classList.add('pending');
+  }
 }
 
 function flashBadges() {
-  els.badgeTurtle.classList.add('danger');
+  // 💡 [수정] danger 대신 CSS에 정의된 error(빨간색)를 쓰고, 더 극적인 효과를 위해 그림자 애니메이션 추가
+  els.badgeTurtle.classList.add('error');
+  els.badgeTurtle.style.boxShadow = '0 0 15px var(--accent2)';
+  els.badgeTurtle.style.transition = 'all 0.2s';
 
   setTimeout(() => {
-    els.badgeTurtle.classList.remove('danger');
+    els.badgeTurtle.style.boxShadow = '';
   }, 800);
 }
 
@@ -259,9 +282,11 @@ els.btnStop.addEventListener('click', () => {
   els.btnStop.disabled = true;
 });
 
-// 초기 뱃지 가시성 조정
-els.badgeTurtle.classList.add('hidden');
-els.badgeNormal.classList.remove('hidden');
+// 💡 [수정] 초기 뱃지 상태 설정 (초기에는 Normal에 불이 들어와 있고 Turtle은 꺼져 있도록 설정)
+els.badgeTurtle.classList.remove('error');
+els.badgeTurtle.classList.add('pending');
+els.badgeNormal.classList.remove('pending');
+els.badgeNormal.classList.add('loaded');
 
 setSystemState({
   mp: '대기',
