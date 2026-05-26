@@ -171,39 +171,30 @@ function updateUI(features, result) {
   els.score.textContent =
     result.score == null ? '-- / 100' : `${result.score} / 100`;
 
-  const isBad = result.label === 'Turtle';
-
-  // 💡 [수정] 이미 CSS에 정의된 loaded, pending, error 클래스를 활용해 불빛 전환 효과 구현
-  if (isBad) {
-    // 거북목 상태: Turtle은 빨간불(error), Normal은 꺼짐(pending)
-    els.badgeTurtle.classList.remove('pending');
-    els.badgeTurtle.classList.add('error');
-
-    els.badgeNormal.classList.remove('loaded');
-    els.badgeNormal.classList.add('pending');
+  // 💡 [수정] hidden 대신 style.css에 정의된 loaded, pending, error 클래스를 직접 교체합니다.
+  if (result.label === 'Turtle') {
+    // 거북목 상태: Turtle Neck은 빨간불(error), Good Posture는 꺼짐(pending)
+    els.badgeTurtle.className = 'badge error';
+    els.badgeNormal.className = 'badge pending';
   } else if (result.label === 'Normal') {
-    // 정상 상태: Normal은 초록불(loaded), Turtle은 꺼짐(pending)
-    els.badgeTurtle.classList.remove('error');
-    els.badgeTurtle.classList.add('pending');
-
-    els.badgeNormal.classList.remove('pending');
-    els.badgeNormal.classList.add('loaded');
+    // 정상 상태: Good Posture는 초록불(loaded), Turtle Neck은 꺼짐(pending)
+    els.badgeTurtle.className = 'badge pending';
+    els.badgeNormal.className = 'badge loaded';
   } else {
     // 미판정 상태: 둘 다 꺼짐(pending)
-    els.badgeTurtle.classList.remove('error');
-    els.badgeTurtle.classList.add('pending');
-    els.badgeNormal.classList.remove('loaded');
-    els.badgeNormal.classList.add('pending');
+    els.badgeTurtle.className = 'badge pending';
+    els.badgeNormal.className = 'badge pending';
   }
 }
 
 function flashBadges() {
-  // 💡 [수정] danger 대신 CSS에 정의된 error(빨간색)를 쓰고, 더 극적인 효과를 위해 그림자 애니메이션 추가
-  els.badgeTurtle.classList.add('error');
-  els.badgeTurtle.style.boxShadow = '0 0 15px var(--accent2)';
+  // 💡 [수정] CSS에 없는 .danger 클래스 대신, 인라인 스타일로 배지가 커지며 빨갛게 빛나는 효과를 줍니다.
   els.badgeTurtle.style.transition = 'all 0.2s';
+  els.badgeTurtle.style.transform = 'scale(1.15)';
+  els.badgeTurtle.style.boxShadow = '0 0 15px var(--accent2)';
 
   setTimeout(() => {
+    els.badgeTurtle.style.transform = '';
     els.badgeTurtle.style.boxShadow = '';
   }, 800);
 }
@@ -282,11 +273,9 @@ els.btnStop.addEventListener('click', () => {
   els.btnStop.disabled = true;
 });
 
-// 💡 [수정] 초기 뱃지 상태 설정 (초기에는 Normal에 불이 들어와 있고 Turtle은 꺼져 있도록 설정)
-els.badgeTurtle.classList.remove('error');
-els.badgeTurtle.classList.add('pending');
-els.badgeNormal.classList.remove('pending');
-els.badgeNormal.classList.add('loaded');
+// 💡 [수정] 초기 상태 설정 (시작 전에는 Good Posture에 초록불, Turtle Neck은 꺼짐)
+els.badgeTurtle.className = 'badge pending';
+els.badgeNormal.className = 'badge loaded';
 
 setSystemState({
   mp: '대기',
