@@ -1,5 +1,6 @@
 // alert.js — 자세 분류 & 알림 담당
-// Turtle Neck 상태가 일정 시간 이상 지속되면 warning을 표시하는 로직
+// Turtle Neck 상태가 일정 시간 이상 지속되면
+// non-blocking warning message를 표시하는 로직
 
 class AlertManager {
   constructor({ windowMs = 5000, onNotify } = {}) {
@@ -37,21 +38,39 @@ class AlertManager {
   }
 
   showWarning() {
-    const warningMessage = document.getElementById('warning-message');
+    let warningMessage = document.getElementById('warning-message');
 
-    if (warningMessage) {
-      warningMessage.textContent = '자세를 바로 잡아주세요!';
-      warningMessage.classList.remove('hidden');
-    } else {
-      alert('자세를 바로 잡아주세요!');
+    // warning element 없으면 자동 생성
+    if (!warningMessage) {
+      warningMessage = document.createElement('div');
+      warningMessage.id = 'warning-message';
+      document.body.appendChild(warningMessage);
     }
+
+    warningMessage.textContent = '자세를 바로 잡아주세요!';
+
+    // 스타일 적용
+    warningMessage.style.display = 'block';
+    warningMessage.style.position = 'fixed';
+    warningMessage.style.top = '20px';
+    warningMessage.style.left = '50%';
+    warningMessage.style.transform = 'translateX(-50%)';
+
+    warningMessage.style.backgroundColor = '#ff4d4f';
+    warningMessage.style.color = 'white';
+    warningMessage.style.padding = '14px 22px';
+    warningMessage.style.borderRadius = '12px';
+    warningMessage.style.fontWeight = 'bold';
+    warningMessage.style.fontSize = '16px';
+    warningMessage.style.zIndex = '9999';
+    warningMessage.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
   }
 
   hideWarning() {
     const warningMessage = document.getElementById('warning-message');
 
     if (warningMessage) {
-      warningMessage.classList.add('hidden');
+      warningMessage.style.display = 'none';
     }
   }
 
