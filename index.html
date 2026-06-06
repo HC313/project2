@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8,12 +7,14 @@
 
   <link rel="stylesheet" href="./style.css" />
 
-  <!-- Optional font preload -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- MediaPipe Pose: pose.js에서 Pose 객체를 사용하기 위해 필요 -->
+  <!-- MediaPipe Pose -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+  <!-- TensorFlow.js (app.js보다 먼저 로드되어야 함) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
 </head>
 
 <body>
@@ -30,10 +31,7 @@
   <main>
     <section class="camera-section">
       <div class="video-wrapper">
-        <!-- app.js에서 id="webcam"을 찾음 -->
         <video id="webcam" autoplay playsinline muted></video>
-
-        <!-- app.js에서 id="overlay"를 찾음 -->
         <canvas id="overlay"></canvas>
 
         <div class="video-overlay-msg" id="videoMsg">
@@ -50,38 +48,54 @@
       </div>
 
       <div class="controls">
-        <!-- app.js에서 id="btn-start", id="btn-stop"을 찾음 -->
         <button class="primary" id="btn-start">카메라 시작</button>
         <button id="btn-stop" disabled>중지</button>
+        <button id="collectNormalBtn" disabled title="현재 자세를 normal 데이터로 저장">정상 수집</button>
+        <button id="collectTurtleBtn" disabled title="현재 자세를 turtle_neck 데이터로 저장">거북목 수집</button>
+      </div>
 
-        <!-- 현재 app.js에서는 직접 사용하지 않지만, 추후 데이터 수집용으로 유지 -->
-        <button id="collectNormalBtn" disabled title="현재 자세를 normal 데이터로 저장">
-          정상 수집
-        </button>
-        <button id="collectTurtleBtn" disabled title="현재 자세를 turtle_neck 데이터로 저장">
-          거북목 수집
-        </button>
+      <!-- crop 미리보기 (디버깅용, 필요 없으면 style="display:none" 추가 가능) -->
+      <div class="card crop-preview-card">
+        <div class="card-title">Crop 미리보기 (모델 입력 영역)</div>
+        <canvas id="crop-canvas" width="112" height="112" style="border-radius:8px; background:#0d0f14;"></canvas>
+        <span style="font-size:0.7rem; color:var(--muted); margin-left:0.75rem;">224×224 → 모델 입력</span>
       </div>
     </section>
 
     <aside class="side-panel">
+
       <!-- 자세 점수 -->
       <div class="card">
         <div class="card-title">자세 점수</div>
-
         <div class="score-display">
-          <!-- app.js에서 id="posture-score"를 찾음 -->
           <div class="score-num" id="posture-score">-- / 100</div>
         </div>
-
         <div class="progress-bar-outer">
           <div class="progress-bar-inner" id="scoreBar" style="width: 0%"></div>
         </div>
-
         <div class="badge-row">
-          <!-- app.js에서 id="badge-normal", id="badge-turtle"을 찾음 -->
           <span class="badge loaded" id="badge-normal">Good Posture</span>
           <span class="badge pending" id="badge-turtle">Turtle Neck</span>
+        </div>
+      </div>
+
+      <!-- 모델 예측 결과 (새로 추가) -->
+      <div class="card">
+        <div class="card-title">모델 예측 결과</div>
+
+        <div class="metric-row">
+          <span class="metric-label">현재 상태</span>
+          <span class="metric-value" id="feature-model-pred">--</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="metric-label">Turtle 확률</span>
+          <span class="metric-value" id="feature-turtle-prob">--</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="metric-label">거북목 지속 시간</span>
+          <span class="metric-value" id="feature-turtle-duration">0s</span>
         </div>
       </div>
 
@@ -109,31 +123,20 @@
           <span class="metric-value" id="feature-shoulder-sym">--</span>
         </div>
 
-        <!-- annotation팀의 pose_ratio와 맞추기 위해 추가 -->
         <div class="metric-row">
           <span class="metric-label">Pose Ratio</span>
           <span class="metric-value" id="feature-pose-ratio">--</span>
-        </div>
-
-        <div class="metric-row">
-          <span class="metric-label">모델 판정</span>
-          <span class="metric-value" id="feature-model-pred">--</span>
         </div>
       </div>
 
       <!-- Threshold 설정 -->
       <div class="card threshold-section">
-        <div class="card-title">임계값 설정</div>
+        <div class="card-title">임계값 설정 (규칙 기반 fallback)</div>
 
         <label for="th-neck-angle">목 기울기 경고 (°)</label>
         <div class="threshold-row">
-          <!-- app.js에서 id="th-neck-angle"을 찾음 -->
           <input
-            type="range"
-            min="5"
-            max="30"
-            step="1"
-            value="15"
+            type="range" min="5" max="30" step="1" value="15"
             id="th-neck-angle"
             oninput="document.getElementById('angleVal').textContent = this.value"
           />
@@ -142,13 +145,8 @@
 
         <label for="th-ear-shoulder">귀-어깨 거리 비율 경고</label>
         <div class="threshold-row">
-          <!-- app.js에서 id="th-ear-shoulder"를 찾음 -->
           <input
-            type="range"
-            min="0.10"
-            max="0.60"
-            step="0.01"
-            value="0.30"
+            type="range" min="0.10" max="0.60" step="0.01" value="0.30"
             id="th-ear-shoulder"
             oninput="document.getElementById('distVal').textContent = Number(this.value).toFixed(2)"
           />
@@ -159,29 +157,21 @@
       <!-- 모델 상태 -->
       <div class="card">
         <div class="card-title">모델 상태</div>
-
         <div class="model-status">
           <div class="model-item">
             <span>MediaPipe Pose</span>
-            <!-- app.js에서 id="state-mediapipe"를 찾음 -->
             <span class="badge pending" id="state-mediapipe">대기</span>
           </div>
-
           <div class="model-item">
             <span>TensorFlow.js</span>
-            <!-- app.js에서 id="state-tf"를 찾음 -->
-            <span class="badge pending" id="state-tf">미학습</span>
+            <span class="badge pending" id="state-tf">로딩 중...</span>
           </div>
-
           <div class="model-item">
-            <span>수집 데이터</span>
-            <!-- app.js에서 id="state-data"를 찾음 -->
-            <span class="badge pending" id="state-data">미학습 0개</span>
+            <span>판정 방식</span>
+            <span class="badge pending" id="state-data">대기</span>
           </div>
-
           <div class="model-item">
             <span>현재 상태</span>
-            <!-- app.js에서 id="model-status"를 찾음 -->
             <span class="badge pending" id="model-status">대기 중</span>
           </div>
         </div>
@@ -190,16 +180,16 @@
       <!-- 감지 이력 -->
       <div class="card">
         <div class="card-title">감지 이력</div>
-        <!-- app.js에서 id="history-list"를 찾음 -->
         <div class="timeline" id="history-list">
           <div class="empty-state">감지 기록 없음</div>
         </div>
       </div>
+
     </aside>
   </main>
 
   <script src="./js/posture.js"></script>
   <script src="./js/alert.js"></script>
-  <script type="module" src="./js/app.js"></script> 
+  <script type="module" src="./js/app.js"></script>
 </body>
 </html>
