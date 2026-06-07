@@ -130,10 +130,10 @@ function cropToTensor(video, cropBox) {
     cropCtx.drawImage(offscreen, 0, 0, els.cropCanvas.width, els.cropCanvas.height);
   }
 
-  // tf.browser.fromPixels → 정규화 → 배치 차원 추가
+  // MobileNetV2 preprocess_input: [0,255] → [-1,1] (pixel/127.5 - 1.0)
   return tf.tidy(() => {
     const imgTensor = tf.browser.fromPixels(offscreen);        // [224,224,3] uint8
-    const normalized = imgTensor.toFloat().div(255.0);         // [224,224,3] float32 0~1
+    const normalized = imgTensor.toFloat().div(127.5).sub(1.0);  // [224,224,3] float32 -1~1 (MobileNetV2 preprocess_input)
     return normalized.expandDims(0);                           // [1,224,224,3]
   });
 }
