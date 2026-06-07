@@ -337,40 +337,41 @@ async function onFrame(video) {
   // 3. crop box 계산
   const cropBox = computeCropBox(landmarks);
 
-  // 디버그 로그
-  console.log('landmarks:', !!landmarks, '| cropBox:', cropBox);
-
-  // 4. crop → tensor → TF 예측
+  // 4. crop → tensor → TF 예측 (참고용 — UI 표시만)
   let turtleProb = null;
   if (cropBox && tfModel) {
     const tensor = cropToTensor(video, cropBox);
     if (tensor) {
       turtleProb = predictTurtle(tensor);
-      console.log('predict raw value:', turtleProb);
       tensor.dispose();
     }
   }
 
-  // 5. 최종 판정
-  //    - TF 모델이 있으면 모델 결과 우선
-  //    - 없으면 규칙 기반(posture.js)
+  // 5. 최종 판정 — 모델 + 규칙 기반 앙상블
+  //    모델이 도메인 갭으로 절대값이 낮으므로,
+  //    규칙 기반 score와 모델 확률을 가중 결합하여 판정
+  const ruleResult = classifyPosture(features, getThresholds());
+
   let result;
   if (turtleProb != null) {
-    const isTurtle = turtleProb > 0.13; // 웹캠 환경 보정 threshold
-    const score    = Math.round((1 - turtleProb) * 100);
+    // 규칙 기반 점수를 0~1 사이로 변환 (100점 = 0, 0점 = 1)
+    const ruleProb = (100 - (ruleResult.score ?? 100)) / 100;
+
+    // 앙상블: 규칙 기반 70% + 모델 30% 가중 결합
+    const ensembleProb = ruleProb * 0.7 + turtleProb * 0.3;
+
+    const isTurtle = ensembleProb > 0.35;
+    const score = Math.round((1 - ensembleProb) * 100);
+
     result = {
       label:      isTurtle ? 'Turtle' : 'Normal',
-      score,
+      score:      Math.max(0, Math.min(100, score)),
       turtleProb,
-      reason:     `model: ${(turtleProb * 100).toFixed(1)}%`,
+      reason:     `ensemble: ${(ensembleProb * 100).toFixed(1)}% (rule:${(ruleProb*100).toFixed(0)}% model:${(turtleProb*100).toFixed(0)}%)`,
     };
   } else {
-    // 규칙 기반 fallback
-    const ruleResult = classifyPosture(features, getThresholds());
-    result = {
-      ...ruleResult,
-      turtleProb: null,
-    };
+    // 모델 없으면 규칙 기반만
+    result = { ...ruleResult, turtleProb: null };
   }
 
   // 6. Turtle 지속 시간 갱신
