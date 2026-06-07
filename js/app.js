@@ -356,7 +356,7 @@ async function onFrame(video) {
   //    - 없으면 규칙 기반(posture.js)
   let result;
   if (turtleProb != null) {
-    const isTurtle = turtleProb > 0.5;
+    const isTurtle = turtleProb > 0.15; // 웹캠 환경 보정 threshold
     const score    = Math.round((1 - turtleProb) * 100);
     result = {
       label:      isTurtle ? 'Turtle' : 'Normal',
