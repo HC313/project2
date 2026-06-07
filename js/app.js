@@ -407,15 +407,16 @@ async function onFrame(video) {
     } else {
       const avgScore   = recentScores.reduce((s, v) => s + v, 0) / recentScores.length;
       const diff       = avgScore - baselineScore;
-      const isTurtle   = postureState === 'turtle';
       // diff를 점수로 변환: diff가 클수록 낮은 점수
       const score      = Math.max(0, Math.min(100, Math.round(100 - diff * 8000)));
+      // 3초 지속 조건 유지 + 점수 70점 미만일 때 Turtle 판정
+      const isTurtle   = postureState === 'turtle' && score < 70;
 
       result = {
         label:      isTurtle ? 'Turtle' : 'Normal',
         score,
         turtleProb,
-        reason:     `diff: ${(diff * 100).toFixed(3)}%p | frames: ${turtleFrameCount}`,
+        reason:     `score: ${score} | diff: ${(diff * 100).toFixed(3)}%p | frames: ${turtleFrameCount}`,
       };
     }
   } else {
