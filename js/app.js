@@ -74,7 +74,7 @@ let tfModel = null;
 async function loadTFModel() {
   setSystemState({ tf: '로딩 중...' });
   try {
-    tfModel = await tf.loadLayersModel('./model/model.json');
+    tfModel = await tf.loadGraphModel('./model/model.json');
     // 모델을 한 번 워밍업해서 첫 predict 지연을 줄인다
     const dummy = tf.zeros([1, 224, 224, 3]);
     tfModel.predict(dummy).dispose();
