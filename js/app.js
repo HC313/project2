@@ -149,6 +149,14 @@ function predictTurtle(tensor) {
   if (!tfModel || !tensor) return null;
 
   return tf.tidy(() => {
+    const output = tfModel.predict(tensor);
+    const val = output.dataSync()[0];
+    console.log('predict raw value:', val);  // ← 이 줄 추가
+    return val;
+  });
+}
+
+  return tf.tidy(() => {
     const output = tfModel.predict(tensor);   // shape [1,1], sigmoid
     return output.dataSync()[0];              // 0에 가까울수록 Normal, 1에 가까울수록 Turtle
   });
