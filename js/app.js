@@ -360,7 +360,7 @@ async function onFrame(video) {
     // 앙상블: 규칙 기반 70% + 모델 30% 가중 결합
     const ensembleProb = ruleProb * 0.7 + turtleProb * 0.3;
 
-    const isTurtle = ensembleProb > 0.35;
+    const isTurtle = ensembleProb > 0.25;
     const score = Math.round((1 - ensembleProb) * 100);
 
     result = {
