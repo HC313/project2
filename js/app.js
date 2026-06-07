@@ -345,6 +345,8 @@ async function onFrame(video) {
   // 3. crop box 계산
   const cropBox = computeCropBox(landmarks);
 
+  console.log('landmarks:', !!landmarks, 'cropBox:', cropBox);
+  
   // 4. crop → tensor → TF 예측
   let turtleProb = null;
   if (cropBox && tfModel) {
