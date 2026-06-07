@@ -186,33 +186,27 @@ function setSystemState({ mp, tf, data } = {}) {
 }
 
 function drawOverlay(landmarks) {
-  const ctx  = els.canvas.getContext('2d');
+  const ctx   = els.canvas.getContext('2d');
+  const srcW  = els.video.videoWidth  || els.video.clientWidth;
+  const srcH  = els.video.videoHeight || els.video.clientHeight;
   const dispW = els.video.clientWidth;
   const dispH = els.video.clientHeight;
 
-  els.canvas.width  = dispW;
-  els.canvas.height = dispH;
-  ctx.clearRect(0, 0, dispW, dispH);
+  // 캔버스 해상도를 비디오 원본 크기로 설정
+  // (CSS transform으로 표시 크기는 조절되므로 여기선 원본 기준)
+  els.canvas.width  = srcW;
+  els.canvas.height = srcH;
+  ctx.clearRect(0, 0, srcW, srcH);
 
   if (!landmarks) return;
 
-  const srcW = els.video.videoWidth  || dispW;
-  const srcH = els.video.videoHeight || dispH;
-  const scaleX = dispW / srcW;
-  const scaleY = dispH / srcH;
-
-  const isMirrored = getComputedStyle(els.video).transform.includes('matrix(-1');
-
-  ctx.save();
-  if (isMirrored) {
-    ctx.translate(dispW, 0);
-    ctx.scale(-1, 1);
-  }
-
+  // MediaPipe 좌표는 비디오 원본 픽셀 기준이므로 스케일 1:1
+  // CSS scaleX(-1)이 video와 canvas 모두에 걸려 있어서
+  // 좌표를 그대로 쓰면 mirror가 자동으로 맞춰짐
   const pointsToDraw = [
-    'nose','leftEar','rightEar',
-    'leftShoulder','rightShoulder',
-    'leftHip','rightHip',
+    'nose', 'leftEar', 'rightEar',
+    'leftShoulder', 'rightShoulder',
+    'leftHip', 'rightHip',
   ];
 
   ctx.fillStyle = '#5b8cff';
@@ -220,11 +214,9 @@ function drawOverlay(landmarks) {
     const p = landmarks[key];
     if (!p || p.x == null || p.y == null) continue;
     ctx.beginPath();
-    ctx.arc(p.x * scaleX, p.y * scaleY, 4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
     ctx.fill();
   }
-
-  ctx.restore();
 }
 
 // ─────────────────────────────────────────────
