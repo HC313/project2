@@ -62,6 +62,50 @@ const alertMgr = new AlertManager({
 });
 
 // ─────────────────────────────────────────────
+// Baseline 보정 (정상 자세 기준점)
+// ─────────────────────────────────────────────
+let baselineScores  = [];
+let baselineScore   = null;
+let isCalibrating   = true;
+let recentScores    = [];
+let turtleFrameCount = 0;
+
+const BASELINE_FRAMES = 90;      // 처음 3초 (30fps 기준)
+const WINDOW_SIZE     = 30;      // 이동평균 윈도우
+const DIFF_THRESHOLD  = 0.008;   // baseline보다 0.8%p 이상 증가하면 의심
+const REQUIRED_FRAMES = 90;      // 3초 지속되면 Turtle 판정
+
+function updatePostureWithBaseline(turtleProb) {
+  // 보정 중
+  if (isCalibrating) {
+    baselineScores.push(turtleProb);
+    if (baselineScores.length >= BASELINE_FRAMES) {
+      baselineScore =
+        baselineScores.reduce((sum, v) => sum + v, 0) / baselineScores.length;
+      isCalibrating = false;
+      console.log('Baseline 보정 완료. baselineScore:', baselineScore);
+      appendHistory(els.history, 'Baseline 보정 완료 — 실시간 감지 시작');
+    }
+    return 'calibrating';
+  }
+
+  // 이동평균 계산
+  recentScores.push(turtleProb);
+  if (recentScores.length > WINDOW_SIZE) recentScores.shift();
+
+  const avgScore = recentScores.reduce((sum, v) => sum + v, 0) / recentScores.length;
+  const diff = avgScore - baselineScore;
+
+  if (diff > DIFF_THRESHOLD) {
+    turtleFrameCount += 1;
+  } else {
+    turtleFrameCount = 0;
+  }
+
+  return turtleFrameCount >= REQUIRED_FRAMES ? 'turtle' : 'normal';
+}
+
+// ─────────────────────────────────────────────
 // TensorFlow.js 모델
 // ─────────────────────────────────────────────
 let tfModel = null;
@@ -347,30 +391,36 @@ async function onFrame(video) {
     }
   }
 
-  // 5. 최종 판정 — 모델 + 규칙 기반 앙상블
-  //    모델이 도메인 갭으로 절대값이 낮으므로,
-  //    규칙 기반 score와 모델 확률을 가중 결합하여 판정
-  const ruleResult = classifyPosture(features, getThresholds());
-
+  // 5. 최종 판정 — baseline 대비 상대 변화량으로 판정
   let result;
   if (turtleProb != null) {
-    // 규칙 기반 점수를 0~1 사이로 변환 (100점 = 0, 0점 = 1)
-    const ruleProb = (100 - (ruleResult.score ?? 100)) / 100;
+    const postureState = updatePostureWithBaseline(turtleProb);
 
-    // 앙상블: 규칙 기반 70% + 모델 30% 가중 결합
-    const ensembleProb = ruleProb * 0.7 + turtleProb * 0.3;
+    if (postureState === 'calibrating') {
+      const progress = Math.round((baselineScores.length / BASELINE_FRAMES) * 100);
+      result = {
+        label:      '보정 중',
+        score:      null,
+        turtleProb,
+        reason:     `baseline 보정 중... ${progress}%`,
+      };
+    } else {
+      const avgScore   = recentScores.reduce((s, v) => s + v, 0) / recentScores.length;
+      const diff       = avgScore - baselineScore;
+      const isTurtle   = postureState === 'turtle';
+      // diff를 점수로 변환: diff가 클수록 낮은 점수
+      const score      = Math.max(0, Math.min(100, Math.round(100 - diff * 5000)));
 
-    const isTurtle = ensembleProb > 0.15;
-    const score = Math.round((1 - ensembleProb) * 100);
-
-    result = {
-      label:      isTurtle ? 'Turtle' : 'Normal',
-      score:      Math.max(0, Math.min(100, score)),
-      turtleProb,
-      reason:     `ensemble: ${(ensembleProb * 100).toFixed(1)}% (rule:${(ruleProb*100).toFixed(0)}% model:${(turtleProb*100).toFixed(0)}%)`,
-    };
+      result = {
+        label:      isTurtle ? 'Turtle' : 'Normal',
+        score,
+        turtleProb,
+        reason:     `diff: ${(diff * 100).toFixed(3)}%p | frames: ${turtleFrameCount}`,
+      };
+    }
   } else {
-    // 모델 없으면 규칙 기반만
+    // 모델 미로드 시 규칙 기반 fallback
+    const ruleResult = classifyPosture(features, getThresholds());
     result = { ...ruleResult, turtleProb: null };
   }
 
@@ -420,6 +470,12 @@ els.btnStop.addEventListener('click', () => {
   running = false;
   cam.stop();
   turtleStartTime = null;
+  // baseline 리셋
+  baselineScores   = [];
+  baselineScore    = null;
+  isCalibrating    = true;
+  recentScores     = [];
+  turtleFrameCount = 0;
   setStatus('대기 중');
   setSystemState({ mp: '대기', tf: tfModel ? '로드됨' : '미로드', data: '대기' });
   els.btnStart.disabled = false;
