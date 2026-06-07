@@ -72,7 +72,7 @@ let turtleFrameCount = 0;
 
 const BASELINE_FRAMES = 90;      // 처음 3초 (30fps 기준)
 const WINDOW_SIZE     = 30;      // 이동평균 윈도우
-const DIFF_THRESHOLD  = 0.008;   // baseline보다 0.8%p 이상 증가하면 의심
+const DIFF_THRESHOLD  = 0.004;   // baseline보다 0.4%p 이상 증가하면 의심
 const REQUIRED_FRAMES = 90;      // 3초 지속되면 Turtle 판정
 
 function updatePostureWithBaseline(turtleProb) {
@@ -409,7 +409,7 @@ async function onFrame(video) {
       const diff       = avgScore - baselineScore;
       const isTurtle   = postureState === 'turtle';
       // diff를 점수로 변환: diff가 클수록 낮은 점수
-      const score      = Math.max(0, Math.min(100, Math.round(100 - diff * 5000)));
+      const score      = Math.max(0, Math.min(100, Math.round(100 - diff * 8000)));
 
       result = {
         label:      isTurtle ? 'Turtle' : 'Normal',
