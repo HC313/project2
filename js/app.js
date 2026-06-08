@@ -32,9 +32,6 @@ const els = {
   badgeNormal: document.getElementById('badge-normal'),
   badgeTurtle: document.getElementById('badge-turtle'),
 
-  thNeck:  document.getElementById('th-neck-angle'),
-  thRatio: document.getElementById('th-ear-shoulder'),
-
   stateMP:     document.getElementById('state-mediapipe'),
   stateTF:     document.getElementById('state-tf'),
   stateData:   document.getElementById('state-data'),
@@ -73,7 +70,7 @@ let turtleFrameCount = 0;
 const BASELINE_FRAMES = 90;      // 처음 3초 (30fps 기준)
 const WINDOW_SIZE     = 30;      // 이동평균 윈도우
 const DIFF_THRESHOLD  = 0.004;   // baseline보다 0.4%p 이상 증가하면 의심
-const REQUIRED_FRAMES = 60;      // 3초 지속되면 Turtle 판정
+const REQUIRED_FRAMES = 90;      // 3초 지속되면 Turtle 판정
 
 function updatePostureWithBaseline(turtleProb) {
   // 보정 중
@@ -213,9 +210,9 @@ function getTurtleDurationSec() {
 // ─────────────────────────────────────────────
 function getThresholds() {
   return {
-    neckAngleDeg:    parseFloat(els.thNeck?.value)  || 15,
-    earShoulderRatio:parseFloat(els.thRatio?.value) || 0.3,
-    poseRatio:       parseFloat(els.thRatio?.value) || 0.3,
+    neckAngleDeg:     15,
+    earShoulderRatio: 0.3,
+    poseRatio:        0.3,
   };
 }
 
@@ -456,7 +453,7 @@ els.btnStart.addEventListener('click', async () => {
     setStatus('분석 중');
     setSystemState({ mp: '동작 중', tf: tfModel ? '동작 중' : '미로드', data: '실행 중' });
 
-    els.btnStart.disabled = false; // 재시작 가능하도록 유지
+    els.btnStart.disabled = false;
     els.btnStop.disabled  = false;
 
     cam.onFrame(onFrame);
